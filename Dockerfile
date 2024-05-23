@@ -1,0 +1,25 @@
+FROM node:18-bookworm
+
+#create /var/app dir
+RUN mkdir -p /var/app
+
+# change to appdir
+WORKDIR /var/app
+
+# copy package.json
+ADD ./package.json ./
+
+# install dependencies
+RUN npm install
+
+# copy code
+ADD . .
+
+# build code
+RUN npm run build
+
+# remove devDependencies
+RUN npm prune --production
+
+# start command
+CMD [ "npm", "run", "start:prod" ]
