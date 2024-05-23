@@ -1,5 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { Message, PubSub } from '@google-cloud/pubsub';
+import * as avro from 'avro-js';
+import { MessageType } from './pubsub-client.enum';
+
+export type PublishMessage = Message & { type?: MessageType; schema?: string };
 
 @Injectable()
 export class PubSubClientService {
@@ -44,9 +48,10 @@ export class PubSubClientService {
 
   async publishMessage(
     topicName: string,
-    message: Message,
+    message: PublishMessage,
   ): Promise<{ message: string }> {
     try {
+      let data: Buffer;
       const topic = this.pubSubClient.topic(topicName);
       const [exists] = await topic.exists();
 
@@ -54,9 +59,15 @@ export class PubSubClientService {
         await topic.create();
       }
 
+      if (message.type === MessageType.AVRO) {
+        data = this.createAvroData(message.data, message.schema);
+      } else {
+        data = this.createJsonData(message.data);
+      }
+
       await topic.publishMessage({
+        data,
         attributes: message.attributes,
-        data: Buffer.from(JSON.stringify(message.data)),
         orderingKey: message.orderingKey,
       });
       console.log(`Message published to topic ${topicName}`);
@@ -69,5 +80,18 @@ export class PubSubClientService {
       });
       throw e;
     }
+  }
+
+  private createJsonData(data) {
+    return Buffer.from(JSON.stringify(data));
+  }
+
+  private createAvroData(data, schema: string): Buffer {
+    if (!schema) {
+      throw new Error('Schema is required for Avro message');
+    }
+
+    const type = avro.parse(schema);
+    return type.toBuffer(data);
   }
 }
