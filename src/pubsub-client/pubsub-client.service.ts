@@ -2,15 +2,22 @@ import { Injectable } from '@nestjs/common';
 import { Message, PubSub } from '@google-cloud/pubsub';
 import * as avro from 'avro-js';
 import { MessageType } from './pubsub-client.enum';
+import * as process from 'node:process';
 
 export type PublishMessage = Message & { type?: MessageType; schema?: string };
 
 @Injectable()
 export class PubSubClientService {
   private pubSubClient: PubSub;
+  private subscriptions: string[] = process.env.SUBSCRIPTIONS?.split(',') || [];
 
   constructor() {
     this.pubSubClient = new PubSub();
+
+    this.subscriptions.forEach((subscriptionString) => {
+      const [topic, subscription] = subscriptionString.split(':');
+      this.createSubscription(topic, subscription);
+    });
   }
 
   async createSubscription(
