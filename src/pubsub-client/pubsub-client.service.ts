@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { Message, PubSub } from '@google-cloud/pubsub';
-import * as avro from 'avro-js';
+import * as avro from 'avsc';
 import { MessageType } from './pubsub-client.enum';
 import * as process from 'node:process';
 
